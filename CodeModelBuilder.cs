@@ -50,6 +50,25 @@ public class CodeModelBuilder : EditorWindow {
 				temp = (FieldItemGen.DamageContent)EditorGUILayout.EnumPopup ("condition : ", temp);
 				model.m_condition = (int)temp;
 			}
+			GUILayout.Label ("Variable : ");
+			foreach(CodeModel.Variable variable in model.variableList){
+				EditorGUILayout.BeginHorizontal();
+				variable.isPublic = EditorGUILayout.ToggleLeft ("public", variable.isPublic);
+				variable.type = EditorGUILayout.TextField (variable.type);
+				variable.varName = EditorGUILayout.TextField (variable.varName);
+				EditorGUILayout.EndHorizontal();
+			}
+
+			EditorGUILayout.BeginHorizontal ();
+			if (GUILayout.Button ("+")) {
+				model.variableList.Add (new CodeModel.Variable ());
+			}
+			if (GUILayout.Button ("-")) {
+				if (codeModelList.Count > 0) {
+					model.variableList.RemoveAt (model.variableList.Count - 1);
+				}
+			}
+			EditorGUILayout.EndHorizontal ();
 
 			GUILayout.Label ("Content : ");
 			model.content = EditorGUILayout.TextArea (model.content);
