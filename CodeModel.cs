@@ -6,7 +6,7 @@ public class CodeModel {
 
 	public string title;
 	public ModelPosition m_modelPosition;
-	public List<ConditionList> m_conditionList;
+	public int m_condition;
 	public string content;
 	public string additionContent;
 
@@ -15,20 +15,13 @@ public class CodeModel {
 		Damage
 	}
 
-	[System.Serializable]
-	public class ConditionList{
-		public int conditionContent;
-		public int conditionValue;
-	}
-
 	public CodeModel(){
 		title = "New Model";
 		content = "Code incide Update/Damage";
 		additionContent = "Function definition";
 
 		m_modelPosition = ModelPosition.Damage;
-		m_conditionList = new List<ConditionList> ();
-		m_conditionList.Add (new ConditionList ());
+		m_condition = 0;
 
 
 	}

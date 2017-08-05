@@ -42,35 +42,15 @@ public class CodeModelBuilder : EditorWindow {
 			model.title = EditorGUILayout.TextField ("Title : ", model.title);
 			model.m_modelPosition = (CodeModel.ModelPosition)EditorGUILayout.EnumPopup ("Update/Damage : ", model.m_modelPosition );
 			if (model.m_modelPosition == CodeModel.ModelPosition.Update) {
-				foreach (CodeModel.ConditionList cond in model.m_conditionList) {
-					EditorGUILayout.BeginHorizontal ();
-					FieldItemGen.Displacement temp = (FieldItemGen.Displacement)cond.conditionContent;
-					temp = (FieldItemGen.Displacement)EditorGUILayout.EnumPopup ("condition : ", (FieldItemGen.Displacement)temp);
-					cond.conditionContent = (int)temp;
-					cond.conditionValue = EditorGUILayout.IntField ("value : ", cond.conditionValue);
-					EditorGUILayout.EndHorizontal ();
-				}
+				FieldItemGen.Displacement temp = (FieldItemGen.Displacement)model.m_condition;
+				temp = (FieldItemGen.Displacement)EditorGUILayout.EnumPopup ("condition : ", temp);
+				model.m_condition = (int)temp;
 			} else {
-				foreach (CodeModel.ConditionList cond in model.m_conditionList) {
-					EditorGUILayout.BeginHorizontal ();
-					FieldItemGen.DamageContent temp = (FieldItemGen.DamageContent)cond.conditionContent;
-					temp = (FieldItemGen.DamageContent)EditorGUILayout.EnumPopup ("condition : ", (FieldItemGen.DamageContent)temp);
-					cond.conditionContent = (int)temp;
-					cond.conditionValue = EditorGUILayout.IntField ("value : ", cond.conditionValue);
-					EditorGUILayout.EndHorizontal ();
-				}
+				FieldItemGen.DamageContent temp = (FieldItemGen.DamageContent)model.m_condition;
+				temp = (FieldItemGen.DamageContent)EditorGUILayout.EnumPopup ("condition : ", temp);
+				model.m_condition = (int)temp;
 			}
-			EditorGUILayout.BeginHorizontal ();
-			if (GUILayout.Button ("+")) {
-				CodeModel.ConditionList newlist = new CodeModel.ConditionList ();
-				model.m_conditionList.Add (newlist);
-			}
-			if (GUILayout.Button ("-")) {
-				if (model.m_conditionList.Count > 1) {
-					model.m_conditionList.RemoveAt (model.m_conditionList.Count - 1);
-				}
-			}
-			EditorGUILayout.EndHorizontal ();
+
 			GUILayout.Label ("Content : ");
 			model.content = EditorGUILayout.TextArea (model.content);
 			GUILayout.Label ("Additional Content : ");
