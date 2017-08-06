@@ -22,12 +22,13 @@ public class FieldItemGen : EditorWindow {
 	private Displacement displacement = Displacement.None;
 	private int displacementSelect = 0;
 	private Timing damageActive = Timing.None;
-	private Timing AutoTarget = Timing.None;
 	private TriggerCondition triggerCondition = TriggerCondition.noTrigger;
 	private int[] damageSelect;
 	private bool[] damageSelectOption;
 	private int targeting;
 	private int targeting_sub;
+	private float destroy_duration;
+	private Timing destroy;
 
 //	private SerializedObject m_seObject;
 //	private SerializedProperty m_seProperty;
@@ -185,6 +186,13 @@ public class FieldItemGen : EditorWindow {
 			targeting_sub = EditorGUILayout.Popup ("\tat ", targeting_sub, new string[]{"Enter", "Stay"});
 		}
 
+		EditorGUILayout.BeginHorizontal ();
+		GUILayout.Label ("Destroy in ");
+		destroy_duration = EditorGUILayout.FloatField (destroy_duration);
+		GUILayout.Label ("sec After ");
+		destroy = (Timing)EditorGUILayout.EnumPopup (destroy);
+		EditorGUILayout.EndHorizontal ();
+
 		GUILayout.Label ("Damage Content : ");
 
 		for (int i = 0; i < damageSelect.Length; i++) {
@@ -230,7 +238,7 @@ public class FieldItemGen : EditorWindow {
 		//class name
 		SB.Append("public class "+ fiTitle +" : MonoBehaviour {\n");
 
-		//class variable
+		//- class variable - - class variable - - class variable - - class variable - - class variable - - class variable - - class variable - - class variable - 
 		SB.Append ("private bool isActive = false;\n");
 		SB.Append ("private bool isTrigger = false;\n");
 		foreach(ActiveComponent AC in components){
@@ -263,12 +271,24 @@ public class FieldItemGen : EditorWindow {
 			SB.Append ("public float trigger_activeDelay;\n");
 			SB.Append ("private float trigger_activeDelayTime;\n");
 		}
-		//Update
+
+		if (targeting == 1) {
+			SB.Append ("private Transform InAreaTarget_target;\n");
+		}
+		if (targeting == 1 || targeting_sub == 1) {
+			SB.Append ("public float targetingAttackInterval;\n" +
+				"private float targetingAttackTime;\n");
+		}
+		if (destroy != Timing.None) {
+			SB.AppendFormat ("public float duration = {0}f;\n", destroy_duration);
+		}
+		//- Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - 
 		SB.Append("void Update () {\n");
 		SB.Append("if(isActive){\n");
 		if ((int)displacement != 0) {
 			CodeModel cm = codeModelUpdate [(int)displacement] [displacementSelect];
 			SB.Append(cm.content);
+			SB.AppendLine ();
 		}
 		if (triggerCondition == TriggerCondition.activeDelay) {
 			SB.Append ("if(!isTrigger && Time.time - trigger_activeDelayTime >= trigger_activeDelay)\n" +
@@ -276,8 +296,8 @@ public class FieldItemGen : EditorWindow {
 		}
 		SB.Append("}\n");
 		SB.Append("}\n");
-		//Active
-		SB.Append("void Active (Vector3 info) {\n");
+		//- Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - 
+		SB.Append("void Active (Vector3 info, BombGenerator.BombType requester) {\n");
 		SB.Append ("isActive = true;\n");
 
 		foreach (ActiveComponent AC in components) {
@@ -293,9 +313,12 @@ public class FieldItemGen : EditorWindow {
 		if (triggerCondition == TriggerCondition.activeDelay) {
 			SB.Append ("trigger_activeDelayTime = Time.time;\n");
 		}
+		if (destroy != Timing.Active) {
+			SB.Append ("Destroy (transform.parent.gameObject, duration);\n");
+		}
 
 		SB.Append("}\n");
-		//Trigger
+		//- Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - 
 		SB.Append("void Trigger () {\n");
 		SB.Append ("isTrigger = true;\n");
 
@@ -309,36 +332,77 @@ public class FieldItemGen : EditorWindow {
 		if (damageActive == Timing.Trigger) {
 			SB.Append ("damageActive = true;\n");
 		}
-
+		if (destroy != Timing.Trigger) {
+			SB.Append ("Destroy (transform.parent.gameObject, duration);\n");
+		}
 		SB.Append("}\n");
-		//Damage
+		//- Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - 
 		SB.Append("void Damage (NPCmovement target) {\n");
+		SB.Append ("if(damageActive){\n");
+		if (targeting == 1 || targeting_sub == 1) {
+			SB.Append ("targetingAttackTime = Time.time;\n");
+		}
 
 		for (int i = 0; i < damageSelect.Length; i++) {
 			if (damageSelect [i] != -1) {
 				CodeModel cm = codeModelDamageContent [i] [damageSelect [i]];
 				SB.Append(cm.content);
+				SB.AppendLine ();
 			}
 		}
 
+		SB.Append ("}\n");
 		SB.Append("}\n");
-		//OnTriggerEnter
+		//- OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - 
 		SB.Append("void OnTriggerEnter(Collider other){\n");
 		SB.Append ("if(other.tag == \"minions\"){\n");
 
 		if (triggerCondition == TriggerCondition.inCollison) {
-			SB.Append ("Trigger();\n");
+			SB.Append ("if(!isTrigger)\n" +
+						"Trigger();\n");
+		}
+		if(targeting == 0 && targeting_sub == 0){
+			SB.Append("Damage(other.GetComponent<NPCmovement> ());\n");
 		}
 
 		SB.Append("}\n");
 		SB.Append("}\n");
-		//OnTriggerStay
+		//- OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - 
 		SB.Append("void OnTriggerStay(Collider other){\n");
+		SB.Append ("if(other.tag == \"minions\"){\n");
+
+		if (targeting == 0 && targeting_sub == 1) {
+			SB.Append ("if(Time.time - targetingAttackTime >= targetingAttackInterval)\n" +
+				"Damage(other.GetComponent<NPCmovement> ());\n");
+		} else if (targeting == 1) {
+			SB.Append ("if(InAreaTarget_target == null || other.GetComponent<NPCmovement> ().IsDead){\n" +
+				"InAreaTarget_target = other.transform;\n" +
+				"}\n");
+		}
 
 		SB.Append("}\n");
-		//OnTriggerExit
+		SB.Append("}\n");
+		//- OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - 
+		SB.Append("void OnTriggerExit(Collider other){\n");
+		SB.Append ("if(other.tag == \"minions\"){\n");
 
-		//Extra
+		if (targeting == 1) {
+			SB.Append ("if(InAreaTarget_target == other.transform){\n" +
+				"InAreaTarget_target = null;\n" +
+				"}\n");
+		}
+
+		SB.Append("}\n");
+		SB.Append("}\n");
+		//- Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - 
+		SB.Append("void Arrived(){\n");
+
+		if (triggerCondition == TriggerCondition.arrived) {
+			SB.Append("Trigger();\n");
+		}
+
+		SB.Append("}\n");
+		//- Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - 
 
 		if ((int)displacement != 0) {
 			CodeModel cm = codeModelUpdate [(int)displacement] [displacementSelect];

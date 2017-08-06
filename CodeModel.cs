@@ -18,8 +18,8 @@ public class CodeModel {
 
 	public CodeModel(){
 		title = "New Model";
-		content = "Code incide Update/Damage";
-		additionContent = "Function definition";
+		content = "//Code incide Update/Damage";
+		additionContent = "//Function definition";
 		variableList = new List<Variable> ();
 		m_modelPosition = ModelPosition.Damage;
 		m_condition = 0;
