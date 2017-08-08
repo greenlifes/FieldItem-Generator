@@ -394,11 +394,11 @@ public class FieldItemGen : EditorWindow {
 
 		//- OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - 
 		CodeWriter cw_OTEx = new CodeWriter("void OnTriggerExit(Collider other){", "}");
-		CodeWriter cw_OTEx_ifminion = cw_OTE * new CodeWriter ("if(other.tag == \"minions\"){\n", "}");
-		CodeWriter cw_OTEx_ifminion_in = cw_OTE_ifminion * new CodeWriter();
+		CodeWriter cw_OTEx_ifminion = cw_OTEx * new CodeWriter ("if(other.tag == \"minions\"){\n", "}");
+		CodeWriter cw_OTEx_ifminion_in = cw_OTEx_ifminion * new CodeWriter();
 
 		if (targeting == 1) {
-			cw_OTS_ifminion_in += 
+			cw_OTEx_ifminion_in += 
 				"if(InAreaTarget_target == other.transform){\n" +
 				"InAreaTarget_target = null;\n" +
 				"}";

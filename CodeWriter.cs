@@ -93,8 +93,4 @@ public class CodeWriter {
 		tail = m_tail + "\n";
 		layer = 0;
 	}
-
-	public string ToString(){
-		return head + tail;
-	}
 }
