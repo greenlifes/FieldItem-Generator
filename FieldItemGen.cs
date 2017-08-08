@@ -91,6 +91,7 @@ public class FieldItemGen : EditorWindow {
 
 		InitialLists ();
 
+		//categorize
 		foreach (CodeModel m in codeModelList) {
 			if (m.m_modelPosition == CodeModel.ModelPosition.Update) {
 				codeModelUpdate [m.m_condition].Add (m);
@@ -101,6 +102,7 @@ public class FieldItemGen : EditorWindow {
 
 		InitialNameLists ();
 
+		//Init Array
 		damageSelect = new int[Enum.GetNames (typeof(DamageContent)).Length];
 		for (int i = 0; i < damageSelect.Length; i++) {
 			damageSelect[i] = -1;
@@ -149,8 +151,7 @@ public class FieldItemGen : EditorWindow {
 		
 		GUILayout.Label ("Basic Information : ");
 		fiTitle = EditorGUILayout.TextField ("ItemTitle", fiTitle);
-
-
+		//
 		EditorGUILayout.BeginHorizontal ();
 		GUILayout.Label ("Component : ");
 		if (GUILayout.Button ("+")) {
@@ -166,7 +167,7 @@ public class FieldItemGen : EditorWindow {
 			AC.active = (ActiveComponent.activeTiming)EditorGUILayout.EnumPopup ("\tActive:", AC.active);
 			AC.deactive = (ActiveComponent.activeTiming)EditorGUILayout.EnumPopup ("\tDeActive:", AC.deactive);
 		}
-
+		//
 		displacement = (Displacement)EditorGUILayout.EnumPopup ("Displacement : ", displacement);
 		if (nameList_update [(int)displacement].Length > 0) {
 			displacementSelect = EditorGUILayout.Popup ("\tFunction : ", displacementSelect,  nameList_update [(int)displacement]);
@@ -174,27 +175,27 @@ public class FieldItemGen : EditorWindow {
 			GUILayout.Label ("\tNo Function");
 			displacementSelect = -1;
 		}
-
+		//
 		damageActive = (Timing)EditorGUILayout.EnumPopup ("Damage Active : ", damageActive);
-
+		//
 		triggerCondition = (TriggerCondition)EditorGUILayout.EnumPopup ("Trigger at : ", triggerCondition);
-
+		//
 		if ((int)displacement >= 2)
 			targeting = 1;
 		targeting = EditorGUILayout.Popup ("Damage Target : ", targeting, new string[]{"InAreaMember", "InAreaTarget"});
 		if (targeting == 0) {
 			targeting_sub = EditorGUILayout.Popup ("\tat ", targeting_sub, new string[]{"Enter", "Stay"});
 		}
-
+		//
 		EditorGUILayout.BeginHorizontal ();
 		GUILayout.Label ("Destroy in ");
 		destroy_duration = EditorGUILayout.FloatField (destroy_duration);
 		GUILayout.Label ("sec After ");
 		destroy = (Timing)EditorGUILayout.EnumPopup (destroy);
 		EditorGUILayout.EndHorizontal ();
+		//
 
 		GUILayout.Label ("Damage Content : ");
-
 		for (int i = 0; i < damageSelect.Length; i++) {
 			damageSelectOption [i] = EditorGUILayout.Toggle (((DamageContent)i).ToString (), damageSelectOption [i]);
 			if (damageSelectOption [i]) {
@@ -208,7 +209,7 @@ public class FieldItemGen : EditorWindow {
 				damageSelect [i] = -1;
 			}
 		}
-
+		//
 		if (GUILayout.Button ("Generate!")) {
 			Generate ();
 		}
@@ -239,16 +240,19 @@ public class FieldItemGen : EditorWindow {
 		SB.Append("public class "+ fiTitle +" : MonoBehaviour {\n");
 
 		//- class variable - - class variable - - class variable - - class variable - - class variable - - class variable - - class variable - - class variable - 
-		SB.Append ("private bool isActive = false;\n");
-		SB.Append ("private bool isTrigger = false;\n");
+		CodeWriter class_var = new CodeWriter();
+		class_var.addHead (new string[]{
+			"private bool isActive = false;",
+			"private bool isTrigger = false;"
+		});
 		foreach(ActiveComponent AC in components){
-			SB.AppendFormat("public GameObject {0};\n", AC.gameObject.name);
+			class_var += "public GameObject "+ AC.gameObject.name +";";
 		}
 		if ((int)displacement != 0) {
 			CodeModel cm = codeModelUpdate [(int)displacement] [displacementSelect];
 			foreach (CodeModel.Variable vari in cm.variableList) {
 				string pubpri = vari.isPublic ? "public" : "private";
-				SB.AppendFormat ("{0} {1} {2};\n", pubpri, vari.type, vari.varName);
+				class_var += pubpri + " " + vari.type + " " + vari.varName + ";";
 			}
 		}
 		for (int i = 0; i < damageSelect.Length; i++) {
@@ -256,154 +260,160 @@ public class FieldItemGen : EditorWindow {
 				CodeModel cm = codeModelDamageContent [i] [damageSelect [i]];
 				foreach (CodeModel.Variable vari in cm.variableList) {
 					string pubpri = vari.isPublic ? "public" : "private";
-					SB.AppendFormat ("{0} {1} {2};\n", pubpri, vari.type, vari.varName);
+					class_var += pubpri + " " + vari.type + " " + vari.varName + ";";
 				}
 			}
 		}
 
 		if (damageActive == Timing.None) {
-			SB.Append ("private bool damageActive = true;\n");
+			class_var += "private bool damageActive = true;";
 		} else {
-			SB.Append ("private bool damageActive = false;\n");
+			class_var += "private bool damageActive = false;";
 		}
 
 		if (triggerCondition == TriggerCondition.activeDelay) {
-			SB.Append ("public float trigger_activeDelay;\n");
-			SB.Append ("private float trigger_activeDelayTime;\n");
+			class_var += "public float trigger_activeDelay;";
+			class_var += "private float trigger_activeDelayTime;";
 		}
 
 		if (targeting == 1) {
-			SB.Append ("private Transform InAreaTarget_target;\n");
+			class_var += "private Transform InAreaTarget_target;";
 		}
 		if (targeting == 1 || targeting_sub == 1) {
-			SB.Append ("public float targetingAttackInterval;\n" +
-				"private float targetingAttackTime;\n");
+			class_var += "public float targetingAttackInterval;";
+			class_var += "private float targetingAttackTime;";
 		}
 		if (destroy != Timing.None) {
-			SB.AppendFormat ("public float duration = {0}f;\n", destroy_duration);
+			class_var += "public float duration = " + destroy_duration.ToString() + "f;";
 		}
+
+		class_var.output (SB);
+
 		//- Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - - Update - 
-		SB.Append("void Update () {\n");
-		SB.Append("if(isActive){\n");
+		CodeWriter cw_update = new CodeWriter("void Update () {", "}");
+		CodeWriter cw_update_isActive = cw_update * new CodeWriter ("if(isActive){", "}");
+		CodeWriter cw_update_isActive_in = cw_update_isActive * new CodeWriter ();
+
 		if ((int)displacement != 0) {
 			CodeModel cm = codeModelUpdate [(int)displacement] [displacementSelect];
-			SB.Append(cm.content);
-			SB.AppendLine ();
+			cw_update_isActive_in += cm.content;
 		}
 		if (triggerCondition == TriggerCondition.activeDelay) {
-			SB.Append ("if(!isTrigger && Time.time - trigger_activeDelayTime >= trigger_activeDelay)\n" +
-				"\tTrigger();\n");
+			cw_update_isActive_in += new CodeWriter(
+				"if(!isTrigger && Time.time - trigger_activeDelayTime >= trigger_activeDelay)",
+				"\tTrigger();"
+			);
 		}
-		SB.Append("}\n");
-		SB.Append("}\n");
+		cw_update.output (SB);
+
 		//- Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - - Active - 
-		SB.Append("void Active (Vector3 info, BombGenerator.BombType requester) {\n");
-		SB.Append ("isActive = true;\n");
+		CodeWriter cw_Active = new CodeWriter("void Active (Vector3 info, BombGenerator.BombType requester) {", "}");
+		CodeWriter cw_Active_inside = cw_Active * new CodeWriter ("isActive = true;");
 
 		foreach (ActiveComponent AC in components) {
 			if (AC.active == ActiveComponent.activeTiming.Active) {
-				SB.AppendFormat ("{0}.SetActive (true);\n", AC.gameObject.name);
+				cw_Active_inside += AC.gameObject.name + ".SetActive (true);";
 			} else if (AC.deactive == ActiveComponent.activeTiming.Active) {
-				SB.AppendFormat ("{0}.SetActive (false);\n", AC.gameObject.name);
+				cw_Active_inside += AC.gameObject.name + ".SetActive (false);";
 			}
 		}
 		if (damageActive == Timing.Active) {
-			SB.Append ("damageActive = true;\n");
+			cw_Active_inside += "damageActive = true;";
 		}
 		if (triggerCondition == TriggerCondition.activeDelay) {
-			SB.Append ("trigger_activeDelayTime = Time.time;\n");
+			cw_Active_inside += "trigger_activeDelayTime = Time.time;";
 		}
 		if (destroy != Timing.Active) {
-			SB.Append ("Destroy (transform.parent.gameObject, duration);\n");
+			cw_Active_inside += "Destroy (transform.parent.gameObject, duration);\n";
 		}
+		cw_Active.output (SB);
 
-		SB.Append("}\n");
 		//- Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - - Trigger - 
-		SB.Append("void Trigger () {\n");
-		SB.Append ("isTrigger = true;\n");
+		CodeWriter cw_Trigger = new CodeWriter("void Trigger () {", "}");
+		CodeWriter cw_Trigger_inside = cw_Trigger * new CodeWriter ("isTrigger = true;");
 
 		foreach (ActiveComponent AC in components) {
 			if (AC.active == ActiveComponent.activeTiming.Trigger) {
-				SB.AppendFormat ("{0}.SetActive (true);\n", AC.gameObject.name);
+				cw_Trigger_inside += AC.gameObject.name + ".SetActive (true);";
 			} else if (AC.deactive == ActiveComponent.activeTiming.Trigger) {
-				SB.AppendFormat ("{0}.SetActive (false);\n", AC.gameObject.name);
+				cw_Trigger_inside += AC.gameObject.name + ".SetActive (false);";
 			}
 		}
 		if (damageActive == Timing.Trigger) {
-			SB.Append ("damageActive = true;\n");
+			cw_Trigger_inside += "damageActive = true;";
 		}
 		if (destroy != Timing.Trigger) {
-			SB.Append ("Destroy (transform.parent.gameObject, duration);\n");
+			cw_Trigger_inside += "Destroy (transform.parent.gameObject, duration);";
 		}
-		SB.Append("}\n");
+		cw_Trigger.output (SB);
+
 		//- Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - - Damage - 
-		SB.Append("void Damage (NPCmovement target) {\n");
-		SB.Append ("if(damageActive){\n");
+		CodeWriter cw_Damage = new CodeWriter("void Damage (NPCmovement target) {", "}");
+		CodeWriter cw_Damage_dActive = cw_Damage * new CodeWriter("if(damageActive){", "}");
+		CodeWriter cw_Damage_dActive_in = cw_Damage_dActive * new CodeWriter ();
+
 		if (targeting == 1 || targeting_sub == 1) {
-			SB.Append ("targetingAttackTime = Time.time;\n");
+			cw_Damage_dActive_in += "targetingAttackTime = Time.time;";
 		}
 
 		for (int i = 0; i < damageSelect.Length; i++) {
 			if (damageSelect [i] != -1) {
 				CodeModel cm = codeModelDamageContent [i] [damageSelect [i]];
-				SB.Append(cm.content);
-				SB.AppendLine ();
+				cw_Damage_dActive_in += cm.content;
 			}
 		}
+		cw_Damage.output (SB);
 
-		SB.Append ("}\n");
-		SB.Append("}\n");
 		//- OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - - OnTriggerEnter - 
-		SB.Append("void OnTriggerEnter(Collider other){\n");
-		SB.Append ("if(other.tag == \"minions\"){\n");
+		CodeWriter cw_OTE = new CodeWriter("void OnTriggerEnter(Collider other){", "}");
+		CodeWriter cw_OTE_ifminion = cw_OTE * new CodeWriter ("if(other.tag == \"minions\"){\n", "}");
+		CodeWriter cw_OTE_ifminion_in = cw_OTE_ifminion * new CodeWriter();
 
 		if (triggerCondition == TriggerCondition.inCollison) {
-			SB.Append ("if(!isTrigger)\n" +
-						"Trigger();\n");
+			cw_OTE_ifminion_in += new CodeWriter("if(!isTrigger)","\tTrigger();");
 		}
 		if(targeting == 0 && targeting_sub == 0){
-			SB.Append("Damage(other.GetComponent<NPCmovement> ());\n");
+			cw_OTE_ifminion_in += "Damage(other.GetComponent<NPCmovement> ());";
 		}
+		cw_OTE.output (SB);
 
-		SB.Append("}\n");
-		SB.Append("}\n");
 		//- OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - - OnTriggerStay - 
-		SB.Append("void OnTriggerStay(Collider other){\n");
-		SB.Append ("if(other.tag == \"minions\"){\n");
+		CodeWriter cw_OTS = new CodeWriter("void OnTriggerStay(Collider other){", "}");
+		CodeWriter cw_OTS_ifminion = cw_OTE * new CodeWriter ("if(other.tag == \"minions\"){\n", "}");
+		CodeWriter cw_OTS_ifminion_in = cw_OTS_ifminion * new CodeWriter();
 
 		if (targeting == 0 && targeting_sub == 1) {
-			SB.Append ("if(Time.time - targetingAttackTime >= targetingAttackInterval)\n" +
-				"Damage(other.GetComponent<NPCmovement> ());\n");
+			cw_OTS_ifminion_in += new CodeWriter("if(Time.time - targetingAttackTime >= targetingAttackInterval)","Damage(other.GetComponent<NPCmovement> ());");
 		} else if (targeting == 1) {
-			SB.Append ("if(InAreaTarget_target == null || other.GetComponent<NPCmovement> ().IsDead){\n" +
+			cw_OTS_ifminion_in += 
+				"if(InAreaTarget_target == null || other.GetComponent<NPCmovement> ().IsDead){\n" +
 				"InAreaTarget_target = other.transform;\n" +
-				"}\n");
+				"}";
 		}
+		cw_OTS.output (SB);
 
-		SB.Append("}\n");
-		SB.Append("}\n");
 		//- OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - - OnTriggerExit - 
-		SB.Append("void OnTriggerExit(Collider other){\n");
-		SB.Append ("if(other.tag == \"minions\"){\n");
+		CodeWriter cw_OTEx = new CodeWriter("void OnTriggerExit(Collider other){", "}");
+		CodeWriter cw_OTEx_ifminion = cw_OTE * new CodeWriter ("if(other.tag == \"minions\"){\n", "}");
+		CodeWriter cw_OTEx_ifminion_in = cw_OTE_ifminion * new CodeWriter();
 
 		if (targeting == 1) {
-			SB.Append ("if(InAreaTarget_target == other.transform){\n" +
+			cw_OTS_ifminion_in += 
+				"if(InAreaTarget_target == other.transform){\n" +
 				"InAreaTarget_target = null;\n" +
-				"}\n");
+				"}";
 		}
+		cw_OTEx.output (SB);
 
-		SB.Append("}\n");
-		SB.Append("}\n");
 		//- Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - - Arrived - 
-		SB.Append("void Arrived(){\n");
-
+		CodeWriter cw_Arrived = new CodeWriter("void Arrived(){", "}");
+		CodeWriter cw_Arrived_in = cw_Arrived * new CodeWriter ();
 		if (triggerCondition == TriggerCondition.arrived) {
-			SB.Append("Trigger();\n");
+			cw_Arrived_in += "Trigger();";
 		}
+		cw_Arrived.output (SB);
 
-		SB.Append("}\n");
 		//- Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - - Extra - 
-
 		if ((int)displacement != 0) {
 			CodeModel cm = codeModelUpdate [(int)displacement] [displacementSelect];
 			SB.Append(cm.additionContent);
